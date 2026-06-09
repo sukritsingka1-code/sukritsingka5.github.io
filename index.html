@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>3R จับคู่กู้สิ่งแวดล้อม - เกมนักคิดกู้โลก</title>
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter and Kanit for Thai readable and colorful design -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800;900&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for cute icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti for winning animation -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Kanit', 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .card-inner {
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            will-change: transform; /* Hint GPU for smooth hardware-accelerated animations */
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .card-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        /* Custom Tech Grid Pattern Background */
+        .tech-grid {
+            background-size: 8px 8px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+        }
+        /* Vertical writing text styling for right ribbon */
+        .vertical-text {
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+        }
+        /* Screen Shake Animation for Bomb Explosion */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+            20%, 40%, 60%, 80% { transform: translateX(6px); }
+        }
+        .shake-animation {
+            animation: shake 0.5s ease-in-out;
+        }
+        /* Red Flash Overlay */
+        .flash-red {
+            animation: flashRedEffect 0.4s ease-out;
+        }
+        @keyframes flashRedEffect {
+            0% { background-color: rgba(239, 68, 68, 0.5); }
+            100% { background-color: rgba(239, 68, 68, 0); }
+        }
+        /* Active Player Glows */
+        .active-p1-glow {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6);
+            border-color: rgba(16, 185, 129, 1);
+        }
+        .active-p2-glow {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+            border-color: rgba(99, 102, 241, 1);
+        }
+        /* Custom scrollbar for eco-journal */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f0fdf4;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #10b981;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-100 via-emerald-50 to-indigo-50 min-h-full text-slate-800 flex flex-col relative overflow-x-hidden select-none">
+
+    <!-- Red Flash Overlay Element for Screen Shaking Danger -->
+    <div id="flash-overlay" class="absolute inset-0 pointer-events-none z-50 transition-colors duration-200"></div>
+
+    <!-- Top Decorative Header -->
+    <header class="bg-white/90 backdrop-blur-md border-b-2 border-emerald-100 py-3.5 px-6 sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="restartToHome()">
+                <div class="bg-emerald-600 text-white p-3 rounded-2xl shadow-lg shadow-emerald-600/30 animate-bounce">
+                    <i class="fa-solid fa-recycle text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black text-emerald-950 tracking-tight flex items-center gap-2">
+                        <span>3R จับคู่กู้สิ่งแวดล้อม</span>
+                        <span class="text-[10px] font-black bg-emerald-600 text-white px-2.5 py-1 rounded-full uppercase tracking-wide">โหมดเล่นง่าย 🚀</span>
+                    </h1>
+                    <p class="text-xs sm:text-sm font-semibold text-emerald-700">เปิดบอร์ดคู่การ์ด 3R สะสมแต้ม หลบระเบิดขยะมลพิษ และสรุปรายงานส่งคุณครูย้อนหลัง!</p>
+                </div>
+            </div>
+            
+            <!-- Turn & Score Dashboard (Visible during Game) -->
+            <div id="dashboard-container" class="hidden flex-wrap items-center gap-3 bg-slate-100 p-2 rounded-2xl border-2 border-slate-200">
+                <!-- Solo Stats -->
+                <div id="solo-stats" class="hidden flex items-center gap-4 px-3 py-1">
+                    <div class="text-center">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase">เวลาที่ใช้</div>
+                        <div class="text-lg font-black text-slate-800" id="live-timer">00:00</div>
+                    </div>
+                    <div class="h-8 w-[1.5px] bg-slate-300"></div>
+                    <div class="text-center">
+                        <div class="text-[10px] text-emerald-600 font-bold uppercase">คู่ที่จับได้</div>
+                        <div class="text-lg font-black text-emerald-600" id="solo-score">0 / 14</div>
+                    </div>
+                </div>
+
+                <!-- Versus Turn/Score Stats -->
+                <div id="versus-stats" class="hidden flex items-center gap-2 sm:gap-4 px-1">
+                    <!-- Player 1 Score badge -->
+                    <div id="p1-badge" class="bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 transition-all duration-300">
+                        <div class="text-[9px] font-black text-emerald-600 flex items-center gap-1">
+                            <i class="fa-solid fa-circle text-[7px] animate-pulse"></i> P1 (สีเขียว)
+                        </div>
+                        <div class="text-sm font-bold text-slate-800 truncate max-w-[80px]" id="p1-display-name">ผู้เล่น 1</div>
+                        <div class="text-lg font-black text-emerald-600" id="p1-score-val">0 คะแนน</div>
+                    </div>
+
+                    <div class="text-xs font-black text-slate-400">VS</div>
+
+                    <!-- Player 2 Score badge -->
+                    <div id="p2-badge" class="bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 transition-all duration-300">
+                        <div class="text-[9px] font-black text-indigo-600 flex items-center gap-1">
+                            <i class="fa-solid fa-circle text-[7px] animate-pulse"></i> P2 (สีน้ำเงิน)
+                        </div>
+                        <div class="text-sm font-bold text-slate-800 truncate max-w-[80px]" id="p2-display-name">ผู้เล่น 2</div>
+                        <div class="text-lg font-black text-indigo-600" id="p2-score-val">0 คะแนน</div>
+                    </div>
+                </div>
+
+                <div class="h-8 w-[1.5px] bg-slate-300"></div>
+                
+                <button onclick="toggleJournal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black py-2.5 px-3 rounded-xl transition duration-250 flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-book"></i>
+                    <span>สมุดบันทึก 3R</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Start Setup Screen (Beautiful, High-Contrast & Comprehensive Choice) -->
+    <div id="start-screen" class="my-auto max-w-4xl w-full mx-auto p-4 sm:p-6 transition-all duration-300 z-30">
+        
+        <!-- Big Hero Branding banner -->
+        <div class="text-center mb-8">
+            <h2 class="text-4xl sm:text-5xl font-extrabold text-emerald-950 mb-2 tracking-tight flex items-center justify-center gap-2">
+                <span>3R จับคู่กู้สิ่งแวดล้อม</span>
+                <i class="fa-solid fa-leaf text-emerald-600 text-3xl animate-bounce"></i>
+            </h2>
+            <p class="text-slate-600 text-base font-bold">เกมเปิดแผ่นป้ายเรียนรู้ ลด ใช้ซ้ำ แปรรูป เพื่อร่วมกันกอบกู้ระบบนิเวศน์แบบไร้รอยต่อ!</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            
+            <!-- Left Side Card: Student Play Portal -->
+            <div class="bg-gradient-to-b from-emerald-50 to-emerald-100/50 rounded-3xl p-6 border-4 border-emerald-500 shadow-xl flex flex-col justify-between space-y-6">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-emerald-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">สำหรับนักเรียน</span>
+                        <h3 class="text-xl font-black text-emerald-950 flex items-center gap-1.5">
+                            <i class="fa-solid fa-gamepad text-emerald-600"></i>
+                            <span>เข้าร่วมเล่นเกม (เริ่มภารกิจ)</span>
+                        </h3>
+                    </div>
+                    <p class="text-xs text-slate-600 font-semibold leading-relaxed mb-4">
+                        เข้าเล่นเกมจับคู่ได้ง่ายๆ บนเครื่องนี้ เลือกเล่นแบบท้าทายตัวเองคนเดียว หรือสลับตาประลองแข่งขัน 2 คนในห้องเรียน เมื่อจบเกมจะมีไฟล์รายงานให้ดาวน์โหลดส่งคุณครูครับ
+                    </p>
+
+                    <!-- Solo & Versus switch -->
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <button onclick="setOfflineMode('solo')" id="btn-mode-solo" class="py-3 px-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-950 font-black text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-1 transform scale-105">
+                            <i class="fa-solid fa-user text-lg text-emerald-600"></i>
+                            <span>เล่นคนเดียว (Solo)</span>
+                        </button>
+                        <button onclick="setOfflineMode('versus')" id="btn-mode-versus" class="py-3 px-3 rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 font-black text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-1 transform opacity-70">
+                            <i class="fa-solid fa-user-group text-lg text-indigo-500"></i>
+                            <span>เล่น 2 คน (Local VS)</span>
+                        </button>
+                    </div>
+
+                    <!-- Name fields -->
+                    <div class="p-4 bg-white border border-slate-200 rounded-2xl space-y-3 shadow-inner">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-700 mb-1" id="p1-offline-label">ชื่อผู้เล่น</label>
+                            <input type="text" id="p1-offline-input" placeholder="ระบุชื่อผู้เล่น..." value="ผู้เล่น 1"
+                                   class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 text-slate-900 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div id="p2-offline-field" class="hidden">
+                            <label class="block text-[10px] font-bold text-slate-700 mb-1">ชื่อผู้เล่นคนที่ 2</label>
+                            <input type="text" id="p2-offline-input" placeholder="ระบุชื่อผู้เล่นคนที่ 2..." value="ผู้เล่น 2"
+                                   class="w-full bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 text-indigo-950 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="startOfflineGame()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+                    <span>ตกลง และเริ่มภารกิจรักษ์โลก 🎮</span>
+                    <i class="fa-solid fa-play"></i>
+                </button>
+            </div>
+
+            <!-- Right Side Card: Teacher Dashboard Portal -->
+            <div class="bg-gradient-to-b from-indigo-50 to-indigo-100/50 rounded-3xl p-6 border-4 border-indigo-500 shadow-xl flex flex-col justify-between space-y-6">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">สำหรับคุณครู</span>
+                        <h3 class="text-xl font-black text-indigo-950 flex items-center gap-1.5">
+                            <i class="fa-solid fa-chalkboard-user text-indigo-600"></i>
+                            <span>โหมดคุณครู (ตรวจคะแนนย้อนหลัง)</span>
+                        </h3>
+                    </div>
+                    <p class="text-xs text-slate-600 font-semibold leading-relaxed mb-4">
+                        คุณครูสามารถตรวจสอบคะแนนและคำตอบอธิบายเชิงวิเคราะห์ย้อนหลังของนักเรียนได้ง่ายๆ โดยการนำไฟล์คำตอบที่นักเรียนส่งมา (ไฟล์รหัส .json) มาเปิดอ่านตรวจดูในระบบนี้ได้ทันที ไม่ต้องต่ออินเทอร์เน็ต!
+                    </p>
+
+                    <div class="p-4 bg-white border border-indigo-200 rounded-2xl space-y-3 text-center shadow-inner">
+                        <i class="fa-solid fa-file-shield text-indigo-500 text-3xl"></i>
+                        <p class="text-[11px] text-slate-500 font-bold">เปิดกล่องเครื่องมือครู เพื่ออัปโหลดและวิเคราะห์คำตอบย้อนหลัง</p>
+                    </div>
+                </div>
+
+                <button onclick="openTeacherPortal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold py-4 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+                    <span>เข้าสู่โหมดคุณครูผู้สอน 🎯</span>
+                    <i class="fa-solid fa-clipboard-user"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Dashboard Monitor Screen Overlay (Splendid Offline Portal) -->
+    <div id="teacher-monitor-screen" class="hidden max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6 flex-grow flex flex-col">
+        
+        <!-- Teacher Header Panel -->
+        <div class="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-950 text-white rounded-3xl p-6 shadow-xl border-4 border-indigo-500/50 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="space-y-1">
+                <div class="text-[10px] font-black tracking-widest text-indigo-400 uppercase">3R Classroom Teacher Offline Board</div>
+                <h3 class="text-2xl font-black flex items-center gap-2">
+                    <span>ระบบตรวจสอบผลสัมฤทธิ์ทางการเรียนรู้ (โหมดคุณครู) 🏫</span>
+                </h3>
+                <p class="text-xs text-slate-400 font-semibold">อัปโหลดไฟล์รายงานผลของนักเรียนแต่ละคนเข้ามา เพื่อให้ระบบประมวลตารางคะแนนและสถิติให้ทันที</p>
+            </div>
+            
+            <!-- File Import Box -->
+            <div class="bg-white/10 p-3 rounded-2xl border border-white/20 flex flex-col items-center gap-2">
+                <label for="teacher-file-uploader" class="cursor-pointer bg-yellow-500 hover:bg-yellow-600 text-slate-950 font-black py-2 px-4 rounded-xl text-xs transition flex items-center gap-2 shadow">
+                    <i class="fa-solid fa-file-import"></i>
+                    <span>อัปโหลดไฟล์คำตอบนักเรียน (.json)</span>
+                </label>
+                <input type="file" id="teacher-file-uploader" multiple accept=".json" class="hidden" onchange="handleStudentFiles(event)">
+                <span class="text-[9px] text-slate-400 font-bold">* คุณครูสามารถเลือกอัปโหลดพร้อมกันหลายไฟล์ได้ครับ</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch flex-grow">
+            <!-- Left Grid: Student Leaderboard (7 Columns) -->
+            <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-lg p-5 flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <h4 class="font-black text-slate-900 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-table-list text-emerald-600"></i>
+                        <span>สรุปตารางคะแนนนักเรียนในระบบ (<span id="monitor-student-count">0</span> คน)</span>
+                    </h4>
+                </div>
+
+                <!-- Table Content -->
+                <div class="overflow-y-auto max-h-[50vh] flex-grow space-y-2" id="monitor-leaderboard-list">
+                    <div class="text-center py-12 text-slate-400 text-sm font-semibold">
+                        <i class="fa-solid fa-cloud-arrow-up text-3xl opacity-40 mb-2 block animate-bounce"></i>
+                        ยังไม่มีข้อมูลประวัติผู้เรียน กรุณากดปุ่ม <b>"อัปโหลดไฟล์คำตอบนักเรียน"</b> ด้านบนขวาครับ
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Grid: Live Feed Explanations (5 Columns) -->
+            <div class="lg:col-span-5 bg-white rounded-3xl border border-slate-200 shadow-lg p-5 flex flex-col">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <h4 class="font-black text-slate-900 text-base flex items-center gap-2">
+                        <i class="fa-solid fa-comment-dots text-indigo-500"></i>
+                        <span>ข้อมูลคำอธิบายเชิงลึกย้อนหลัง</span>
+                    </h4>
+                </div>
+
+                <!-- Live Feed Feed List -->
+                <div class="overflow-y-auto max-h-[50vh] flex-grow space-y-3" id="monitor-feed-list">
+                    <div class="text-center py-12 text-slate-400 text-sm font-semibold">
+                        <i class="fa-solid fa-file-signature text-3xl opacity-40 mb-2 block"></i>
+                        คลิกที่รายชื่อนักเรียนทางด้านซ้าย เพื่อดึงข้อมูลประวัติคำอธิบาย 3R ทั้งหมดของนักเรียนคนนั้นขึ้นมาตรวจดูครับ
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+            <button onclick="restartToHome()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black py-2.5 px-6 rounded-xl transition text-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-house"></i>
+                <span>กลับสู่หน้าแรก</span>
+            </button>
+            <span class="text-[10px] text-slate-400 font-semibold">* ข้อมูลห้องเรียนทั้งหมดประมวลผลภายในบราวเซอร์ของคุณครู 100% ปลอดภัยและเป็นส่วนตัวสูง</span>
+        </div>
+    </div>
+
+    <!-- Active Turn Toast Indicator (Versus Mode) -->
+    <div id="turn-toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-sm font-black px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 z-30">
+        <span id="turn-toast-emoji">🔄</span>
+        <span id="turn-toast-message">สลับตาผู้เล่น!</span>
+    </div>
+
+    <!-- Main Game Board Workspace -->
+    <main id="game-workspace" class="hidden flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
+        
+        <!-- Game Board Container -->
+        <div class="flex-grow flex flex-col justify-center">
+            <!-- Active Player Banner in Versus Mode -->
+            <div id="versus-turn-banner" class="hidden text-center mb-4 p-3 bg-white rounded-2xl border-2 border-slate-200 transition-all duration-300 shadow">
+                <span class="text-xs uppercase font-extrabold tracking-widest text-slate-500 block">เทิร์นปัจจุบัน</span>
+                <span id="active-player-name" class="text-xl font-black text-emerald-600 animate-pulse">ผู้เล่น 1 (สีเขียว)</span>
+            </div>
+
+            <!-- 5x6 Grid Board -->
+            <div id="game-board-wrapper" class="w-full">
+                <div id="game-board" class="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3.5 perspective-1000 max-w-4xl mx-auto w-full">
+                    <!-- Cards will be dynamically injected here by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side Panel: Quick Eco Guide & Live Journal -->
+        <aside class="w-full lg:w-80 flex flex-col gap-4 shrink-0">
+            <!-- Educational Guide Card -->
+            <div class="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm">
+                <h3 class="text-md font-bold text-emerald-800 mb-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-nodes"></i>
+                    <span>คู่มือถอดรหัสรักษ์โลก 3R</span>
+                </h3>
+                <div class="space-y-3 text-xs">
+                    <div class="p-2.5 bg-blue-50/60 border border-blue-200/50 rounded-xl">
+                        <strong class="text-blue-700 block mb-0.5">🔵 REDUCE (ลดการใช้)</strong>
+                        <p class="text-slate-600 font-semibold">ลดการสร้างขยะตั้งแต่แรกเริ่ม หลีกเลี่ยงหีบห่อ และสิ่งของฟุ่มเฟือย</p>
+                    </div>
+                    <div class="p-2.5 bg-amber-50/60 border border-amber-200/50 rounded-xl">
+                        <strong class="text-amber-700 block mb-0.5">🟡 REUSE (ใช้ซ้ำ)</strong>
+                        <p class="text-slate-600 font-semibold">นำกลับมาหมุนเวียนใช้ประโยชน์ซ้ำจนกว่าจะหมดสภาพ ยืดอายุผลิตภัณฑ์</p>
+                    </div>
+                    <div class="p-2.5 bg-emerald-50/60 border border-emerald-200/50 rounded-xl">
+                        <strong class="text-emerald-700 block mb-0.5">🟢 RECYCLE (แปรรูปนำกลับมาใช้)</strong>
+                        <p class="text-slate-600 font-semibold">คัดแยกและส่งแปรรูปหลอมขึ้นรูปใหม่ เพื่อสร้างมูลค่าขยะให้กลับเป็นสินค้า</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Player Danger Logs Badge -->
+            <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-5 shadow-lg relative overflow-hidden border border-slate-700">
+                <div class="absolute -right-8 -bottom-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl"></div>
+                <div class="relative z-10 space-y-3">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-indigo-400" id="tracker-header">Eco Hazard Tracker</div>
+                    
+                    <div class="space-y-1.5">
+                        <div class="text-xs font-semibold flex items-center justify-between">
+                            <span class="flex items-center gap-1">
+                                <i class="fa-solid fa-burst text-rose-400"></i> โดนระเบิดขยะสะสม:
+                            </span>
+                            <span id="p1-bomb-hits" class="font-bold text-white bg-rose-950/70 px-2.5 py-0.5 rounded-full border border-rose-800">P1: 0 ครั้ง</span>
+                        </div>
+                        <div id="p2-bomb-tracker-row" class="text-xs font-semibold flex items-center justify-between hidden">
+                            <span class="flex items-center gap-1">
+                                <i class="fa-solid fa-burst text-rose-400"></i> โดนระเบิดขยะสะสม:
+                            </span>
+                            <span id="p2-bomb-hits" class="font-bold text-white bg-indigo-950/70 px-2.5 py-0.5 rounded-full border border-indigo-800">P2: 0 ครั้ง</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex items-center gap-2 text-xs bg-white/10 py-1.5 px-3 rounded-xl border border-white/10 w-fit">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                        <span id="game-state-badge">สถานะระบบ: โหมดเครื่องเดียว</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Reflection/Explanation Input Modal (Crucial Step for pedagogical flow) -->
+    <div id="reflection-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border-4 border-emerald-400 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Modal Header -->
+            <div id="modal-header-container" class="bg-emerald-900 text-white px-6 py-4 flex items-center justify-between border-b border-emerald-800">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-atom text-xl text-emerald-300 animate-spin-slow"></i>
+                    <h3 class="font-bold text-lg">การจับคู่สำเร็จยอดเยี่ยม! 🔗</h3>
+                </div>
+                <div class="text-xs bg-emerald-950 text-emerald-300 font-bold px-3 py-1 rounded-full border border-emerald-800" id="modal-category-badge">
+                    REUSE
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div class="p-6 overflow-y-auto max-h-[70vh] space-y-5">
+                <p class="text-slate-700 text-sm font-semibold">
+                    <i class="fa-solid fa-user-check text-emerald-600"></i> สิทธิ์ในการตอบข้อความของ: <span id="modal-active-player" class="font-black text-emerald-600 text-base">ผู้เล่น 1</span>
+                </p>
+                <p class="text-slate-600 text-xs">การ์ดคู่นี้อยู่ในแนวคิดเดียวกันคือ <span class="font-bold text-emerald-600" id="modal-category-text">REUSE</span> ! ให้นักเรียนระบุแนวทางการประยุกใช้สิ่งของทั้งสองชิ้นลงในช่องข้างล่างครับ:</p>
+                
+                <!-- Cards side by side preview -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Left Card Concept -->
+                    <div class="bg-slate-50 border-2 border-slate-200 p-4 rounded-2xl flex flex-col items-center text-center relative overflow-hidden">
+                        <span class="text-xs uppercase font-extrabold text-slate-500 mb-1" id="modal-card1-top-type">REDUCE</span>
+                        <div id="modal-card1-emoji" class="text-4xl my-2">🧾</div>
+                        <div id="modal-card1-name" class="font-bold text-slate-800 text-sm">ใบเสร็จอิเล็กทรอนิกส์</div>
+                    </div>
+                    <!-- Right Card Concept -->
+                    <div class="bg-slate-50 border-2 border-slate-200 p-4 rounded-2xl flex flex-col items-center text-center relative overflow-hidden">
+                        <span class="text-xs uppercase font-extrabold text-slate-500 mb-1" id="modal-card2-top-type">REUSE</span>
+                        <div id="modal-card2-emoji" class="text-4xl my-2">📚</div>
+                        <div id="modal-card2-name" class="font-bold text-slate-800 text-sm">หนังสือเก่า</div>
+                    </div>
+                </div>
+
+                <!-- Input Forms for explanation -->
+                <div class="space-y-4 pt-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                            <span id="modal-card1-label-emoji">🧾</span>
+                            <span>... <span class="text-slate-900 font-black" id="modal-card1-label-name">ใบเสร็จอิเล็กทรอนิกส์</span></span>
+                        </label>
+                        <textarea id="explanation-input-1" placeholder="พิมพ์วิธีการประยุกต์ใช้เพื่อการรักษ์โลกที่นี่..." 
+                                  rows="2" class="w-full border-2 border-slate-200 rounded-xl p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm bg-slate-50 font-semibold"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                            <span id="modal-card2-label-emoji">📚</span>
+                            <span>... <span class="text-slate-900 font-black" id="modal-card2-label-name">หนังสือเก่า</span></span>
+                        </label>
+                        <textarea id="explanation-input-2" placeholder="พิมพ์วิธีการประยุกต์ใช้เพื่อการรักษ์โลกที่นี่..." 
+                                  rows="2" class="w-full border-2 border-slate-200 rounded-xl p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm bg-slate-50 font-semibold"></textarea>
+                    </div>
+                </div>
+
+                <!-- Guidance Tips -->
+                <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-emerald-800 flex gap-2">
+                    <i class="fa-solid fa-microchip text-base shrink-0 mt-0.5 animate-pulse"></i>
+                    <div>
+                        <strong>คำอธิบายกู้โลก:</strong> ร่วมแชร์มุมมองความคิดว่าสิ่งนี้เมื่อประมวลผลตามระบบ 3R แล้ว จะช่วยลดขยะและทรัพยากรโลกได้อย่างไรบ้าง
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <span id="modal-warning" class="text-xs text-rose-500 font-bold mr-auto hidden">รบกวนนักเรียนกรอกคำอธิบายให้ครบถ้วนทั้งสองกล่องก่อนบันทึกนะคร้าบ! 😊</span>
+                <button onclick="submitExplanation()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 px-6 rounded-xl shadow-md transition flex items-center gap-2">
+                    <span>บันทึกความรู้และเปิดกระดานต่อ</span>
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learning Journal Sidebar/Drawer -->
+    <div id="journal-drawer" class="fixed inset-y-0 right-0 max-w-md w-full bg-white shadow-2xl border-l-4 border-emerald-500 z-50 flex flex-col translate-x-full transition-transform duration-300">
+        <div class="p-4 bg-slate-900 text-white flex items-center justify-between">
+            <h3 class="font-bold flex items-center gap-1.5">
+                <i class="fa-solid fa-list-check text-emerald-400"></i>
+                <span>ประวัติบันทึกการเรียนรู้ (3R Log)</span>
+            </h3>
+            <button onclick="toggleJournal()" class="text-white/80 hover:text-white p-1 text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <!-- Journal content list -->
+        <div class="p-4 flex-grow overflow-y-auto space-y-4" id="journal-list">
+            <div class="text-center py-12 text-slate-400 text-sm space-y-2">
+                <i class="fa-solid fa-folder-open text-3xl opacity-50"></i>
+                <p>ระบบยังไม่ได้รับข้อมูลบันทึกใดๆ<br>พยายามค้นหาคู่การ์ดที่เข้าข่าย 3R เดียวกันเลย!</p>
+            </div>
+        </div>
+        <!-- Journal action buttons -->
+        <div class="p-4 bg-slate-50 border-t border-slate-100 space-y-2">
+            <button onclick="copyJournalToClipboard()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow">
+                <i class="fa-solid fa-copy"></i>
+                <span>คัดลอกบันทึกข้อมูลส่งครู</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game End / Victory Overlay Screen -->
+    <div id="end-screen" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border-4 border-emerald-400 text-center relative overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div class="overflow-y-auto space-y-6 pr-1">
+                <!-- Trophy Graphic -->
+                <div class="w-24 h-24 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto shadow-inner animate-bounce">
+                    <i class="fa-solid fa-trophy text-5xl"></i>
+                </div>
+                
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-black text-emerald-950" id="end-title">สรุปผลการประลอง 3R! 🏆</h2>
+                    <p class="text-slate-500 text-sm font-semibold mt-1">นักประดิษฐ์คนเก่งได้กู้เศษอาหารและขยะมลพิษกลับเข้าสู่สมดุลได้สำเร็จ</p>
+                </div>
+
+                <!-- Final Multi-player Stats Layout -->
+                <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 space-y-3 max-w-md mx-auto text-left" id="end-stats-container">
+                    <!-- Dynaimc Stats injected here by JS -->
+                </div>
+
+                <!-- Summarized Explanations for copy -->
+                <div class="text-left space-y-3">
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center justify-between">
+                        <span>ข้อมูลสรุปบันทึกการเรียนรู้</span>
+                        <button onclick="downloadStudentJSON()" class="text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-lg hover:bg-indigo-100 transition flex items-center gap-1 font-bold">
+                            <i class="fa-solid fa-file-arrow-down"></i> ดาวน์โหลดไฟล์ส่งครู (.json)
+                        </button>
+                    </h3>
+                    
+                    <div id="end-report-container" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-3 max-h-48 overflow-y-auto">
+                        <!-- Summary list of matches and reasons will be put here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-100">
+                <button onclick="restartToHome()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black py-3.5 rounded-2xl transition flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-arrow-rotate-left"></i>
+                    <span>กลับสู่หน้าแรก</span>
+                </button>
+                <button onclick="copyJournalToClipboard();" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-copy"></i>
+                    <span>คัดลอกคำตอบพิมพ์ส่งคุณครู</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 z-50">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-message">คัดลอกรายงานเรียบร้อยแล้ว!</span>
+    </div>
+
+    <!-- Gameplay Scripts -->
+    <script>
+        // --- GLOBAL GAME STATE VARIABLES (Explicitly Bound to Global Scope) ---
+        window.isBoardLocked = false;
+        window.cards = [];
+        window.flippedCards = [];
+        window.matchJournal = [];
+        window.pendingMatchData = null;
+        window.gameMode = 'solo'; // 'solo' or 'versus'
+        window.activePlayer = 1; // 1 or 2
+        window.p1Name = "ผู้เล่น 1";
+        window.p2Name = "ผู้เล่น 2";
+        window.p1Score = 0;
+        window.p2Score = 0;
+        window.p1Bombs = 0;
+        window.p2Bombs = 0;
+        window.secondsPassed = 0;
+        window.timerInterval = null;
+        window.lastClickTime = 0;
+        window.importedStudentsData = []; // Offline Teacher in-memory store
+        window.lockTimestamp = null;
+
+        // Backup mapping for global scope variables (fixing ReferenceError in various contexts)
+        var isBoardLocked = false;
+        var cards = [];
+        var flippedCards = [];
+        var matchJournal = [];
+        var pendingMatchData = null;
+        var gameMode = 'solo';
+        var activePlayer = 1;
+        var p1Name = "ผู้เล่น 1";
+        var p2Name = "ผู้เล่น 2";
+        var p1Score = 0;
+        var p2Score = 0;
+        var p1Bombs = 0;
+        var p2Bombs = 0;
+        var secondsPassed = 0;
+        var timerInterval = null;
+        var lastClickTime = 0;
+        var importedStudentsData = [];
+
+        // Robust DOM helper selectors to safeguard against null reference crashes
+        function safeSetText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
+        }
+
+        function safeSetHTML(id, html) {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = html;
+        }
+
+        function safeAddClass(id, className) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add(className);
+        }
+
+        // Robust function to safeguard against class removal failures
+        function safeRemoveClass(id, className) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove(className);
+        }
+
+        // Sound Engine Initializer
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        window.playSound = function(type) {
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'flip') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(350, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                } else if (type === 'match') {
+                    osc.type = 'sine';
+                    const notes = [293.66, 392.00, 587.33, 880.00];
+                    notes.forEach((freq, i) => {
+                        const noteOsc = audioCtx.createOscillator();
+                        const noteGain = noteOsc.createGain();
+                        noteOsc.connect(noteGain);
+                        noteGain.connect(audioCtx.destination);
+                        noteOsc.type = 'triangle';
+                        noteOsc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.08);
+                        noteGain.gain.setValueAtTime(0.12, audioCtx.currentTime + i * 0.08);
+                        noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.08 + 0.35);
+                        noteOsc.start(audioCtx.currentTime + i * 0.08);
+                        noteOsc.stop(audioCtx.currentTime + i * 0.08 + 0.35);
+                    });
+                } else if (type === 'fail') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                } else if (type === 'explosion') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(10, audioCtx.currentTime + 0.6);
+                    
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(140, audioCtx.currentTime);
+                    
+                    osc.disconnect(gain);
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    
+                    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
+                    
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.7);
+                } else if (type === 'turnSwap') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(554.37, audioCtx.currentTime + 0.08);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.16);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                } else if (type === 'victory') {
+                    const victoryNotes = [523.25, 587.33, 659.25, 698.46, 783.99, 880.00, 987.77, 1046.50];
+                    victoryNotes.forEach((freq, i) => {
+                        const noteOsc = audioCtx.createOscillator();
+                        const noteGain = noteOsc.createGain();
+                        noteOsc.connect(noteGain);
+                        noteGain.connect(audioCtx.destination);
+                        noteOsc.type = 'sine';
+                        noteOsc.frequency.setValueAtTime(freq, audioCtx.currentTime + i * 0.08);
+                        noteGain.gain.setValueAtTime(0.1, audioCtx.currentTime + i * 0.08);
+                        noteGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.08 + 0.45);
+                        noteOsc.start(audioCtx.currentTime + i * 0.08);
+                        noteOsc.stop(audioCtx.currentTime + i * 0.08 + 0.45);
+                    });
+                }
+            } catch (err) {
+                console.log("Audio API contextual issue resolved.");
+            }
+        };
+
+        // Helper function to fetch card style/metadata
+        function getCategoryMeta(type) {
+            switch(type) {
+                case 'reduce': 
+                    return {
+                        outerBorder: 'border-blue-500/60',
+                        textClass: 'text-blue-700',
+                        headerTitle: 'Reduce',
+                        ribbonBg: 'bg-gradient-to-b from-blue-700 to-indigo-800',
+                        ribbonBorder: 'border-blue-800',
+                        ribbonIcon: 'fa-solid fa-cloud-download',
+                        badgeBg: 'bg-blue-600 text-white',
+                        badgeIcon: 'fa-solid fa-minus'
+                    };
+                case 'reuse': 
+                    return {
+                        outerBorder: 'border-amber-500/60',
+                        textClass: 'text-amber-600',
+                        headerTitle: 'Reuse',
+                        ribbonBg: 'bg-gradient-to-b from-amber-500 to-yellow-600',
+                        ribbonBorder: 'border-amber-600',
+                        ribbonIcon: 'fa-solid fa-arrows-spin',
+                        badgeBg: 'bg-amber-500 text-white',
+                        badgeIcon: 'fa-solid fa-arrows-left-right'
+                    };
+                case 'recycle': 
+                    return {
+                        outerBorder: 'border-emerald-600/60',
+                        textClass: 'text-emerald-700',
+                        headerTitle: 'Recycle',
+                        ribbonBg: 'bg-gradient-to-b from-emerald-600 to-teal-700',
+                        ribbonBorder: 'border-emerald-700',
+                        ribbonIcon: 'fa-solid fa-recycle',
+                        badgeBg: 'bg-emerald-600 text-white',
+                        badgeIcon: 'fa-solid fa-hand-holding-heart'
+                    };
+                case 'bomb':
+                    return {
+                        outerBorder: 'border-rose-600/80 bg-rose-50',
+                        textClass: 'text-rose-600 animate-pulse font-black',
+                        headerTitle: '⚠️ BOMB ⚠️',
+                        ribbonBg: 'bg-gradient-to-b from-rose-600 to-red-950',
+                        ribbonBorder: 'border-rose-800',
+                        ribbonIcon: 'fa-solid fa-bomb',
+                        badgeBg: 'bg-rose-600 text-white',
+                        badgeIcon: 'fa-solid fa-triangle-exclamation'
+                    };
+            }
+        }
+
+        // Offline mode setup switcher
+        window.setOfflineMode = function(mode) {
+            window.gameMode = mode;
+            gameMode = mode;
+            const btnSolo = document.getElementById('btn-mode-solo');
+            const btnVersus = document.getElementById('btn-mode-versus');
+            const p2Field = document.getElementById('p2-offline-field');
+            const p1Label = document.getElementById('p1-offline-label');
+
+            window.playSound('flip');
+
+            if (mode === 'solo') {
+                if (btnSolo) btnSolo.className = "py-3 px-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 text-emerald-950 font-black text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-1 transform scale-105";
+                if (btnVersus) btnVersus.className = "py-3 px-3 rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 font-black text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-1 transform opacity-70";
+                if (p2Field) p2Field.classList.add('hidden');
+                if (p1Label) p1Label.innerText = "ชื่อผู้เล่น";
+            } else {
+                if (btnSolo) btnSolo.className = "py-3 px-3 rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 font-black text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-1 transform opacity-70";
+                if (btnVersus) btnVersus.className = "py-3 px-3 rounded-2xl border-2 border-indigo-500 bg-indigo-50 text-indigo-950 font-black text-xs shadow-sm transition-all flex flex-col items-center justify-center gap-1 transform scale-105";
+                if (p2Field) p2Field.classList.remove('hidden');
+                if (p1Label) p1Label.innerText = "ชื่อผู้เล่นคนที่ 1";
+            }
+        };
+
+        // START OFFLINE GAMEPLAY
+        window.startOfflineGame = function() {
+            window.p1Name = document.getElementById('p1-offline-input').value.trim() || "ผู้เล่น 1";
+            window.p2Name = document.getElementById('p2-offline-input').value.trim() || "ผู้เล่น 2";
+            p1Name = window.p1Name;
+            p2Name = window.p2Name;
+
+            launchGameLayout();
+        };
+
+        const launchGameLayout = () => {
+            // UI Display updates using safe Null-checked setters
+            safeSetText('p1-display-name', window.p1Name);
+            safeSetText('p2-display-name', window.p2Name);
+            safeSetText('end-player', window.gameMode === 'versus' ? `${window.p1Name} & ${window.p2Name}` : window.p1Name);
+
+            // Reveal Game Elements safely
+            safeAddClass('start-screen', 'hidden');
+            safeAddClass('teacher-monitor-screen', 'hidden');
+            
+            safeRemoveClass('dashboard-container', 'hidden');
+            safeAddClass('dashboard-container', 'flex');
+
+            safeRemoveClass('game-workspace', 'hidden');
+            safeAddClass('game-workspace', 'flex');
+
+            const versusBanner = document.getElementById('versus-turn-banner');
+
+            if (window.gameMode === 'solo') {
+                safeRemoveClass('solo-stats', 'hidden');
+                safeAddClass('versus-stats', 'hidden');
+                safeAddClass('p2-bomb-tracker-row', 'hidden');
+                safeSetText('game-state-badge', "สถานะ: ออฟไลน์ Solo");
+                if (versusBanner) versusBanner.classList.add('hidden');
+                startTimer();
+            } else if (window.gameMode === 'versus') {
+                safeAddClass('solo-stats', 'hidden');
+                safeRemoveClass('versus-stats', 'hidden');
+                safeRemoveClass('p2-bomb-tracker-row', 'hidden');
+                safeSetText('game-state-badge', "สถานะ: ออฟไลน์ VS");
+                if (versusBanner) versusBanner.classList.remove('hidden');
+                
+                window.activePlayer = 1;
+                window.p1Score = 0;
+                window.p2Score = 0;
+                window.p1Bombs = 0;
+                window.p2Bombs = 0;
+                activePlayer = 1;
+                p1Score = 0;
+                p2Score = 0;
+                p1Bombs = 0;
+                p2Bombs = 0;
+                
+                updateVersusScores();
+                highlightActivePlayerBadge();
+            }
+
+            initGameBoard();
+        };
+
+        // Open Teacher Portal
+        window.openTeacherPortal = () => {
+            window.playSound('flip');
+            safeAddClass('start-screen', 'hidden');
+            safeRemoveClass('teacher-monitor-screen', 'hidden');
+            renderTeacherDashboard();
+        };
+
+        // Handle uploaded student JSON files in Teacher Portal
+        window.handleStudentFiles = function(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            let loadedCount = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const parsedData = JSON.parse(e.target.result);
+                        // Add unique identifier to avoid duplicates
+                        parsedData.id = parsedData.playerName + "_" + parsedData.time + "_" + Date.now();
+                        importedStudentsData.push(parsedData);
+                    } catch (err) {
+                        console.error("Error parsing student file:", err);
+                    }
+                    loadedCount++;
+                    if (loadedCount === files.length) {
+                        showToast(`อัปโหลดไฟล์คำตอบของนักเรียนสำเร็จ ${files.length} รายการ! 📝`);
+                        renderTeacherDashboard();
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+
+        function renderTeacherDashboard() {
+            const listContainer = document.getElementById('monitor-leaderboard-list');
+            const studentCountEl = document.getElementById('monitor-student-count');
+            
+            if (!listContainer) return;
+            if (studentCountEl) studentCountEl.innerText = importedStudentsData.length;
+
+            if (importedStudentsData.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 text-sm font-semibold">
+                        <i class="fa-solid fa-cloud-arrow-up text-3xl opacity-40 mb-2 block animate-bounce"></i>
+                        ยังไม่มีข้อมูลประวัติผู้เรียน กรุณากดปุ่ม <b>"อัปโหลดไฟล์คำตอบนักเรียน"</b> ด้านบนขวาครับ
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort students by Score DESC, Bombs ASC, Time ASC
+            const sortedStudents = [...importedStudentsData].sort((a, b) => {
+                const scoreA = parseInt(a.score) || 0;
+                const scoreB = parseInt(b.score) || 0;
+                if (scoreB !== scoreA) return scoreB - scoreA;
+                const bombsA = parseInt(a.bombs) || 0;
+                const bombsB = parseInt(b.bombs) || 0;
+                if (bombsA !== bombsB) return bombsA - bombsB;
+                return a.time.localeCompare(b.time);
+            });
+
+            listContainer.innerHTML = sortedStudents.map((student, index) => {
+                let rankIcon = `<span class="font-extrabold text-slate-400 text-sm w-6 text-center">${index + 1}</span>`;
+                if (index === 0) rankIcon = `🏆`;
+                else if (index === 1) rankIcon = `🥈`;
+                else if (index === 2) rankIcon = `🥉`;
+
+                return `
+                    <div class="bg-slate-50 border-2 border-slate-200/60 p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-indigo-400 cursor-pointer transition duration-200"
+                         onclick="inspectStudentAnswers('${student.id}')">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="text-lg">${rankIcon}</span>
+                            <div class="min-w-0">
+                                <strong class="text-sm text-slate-900 block truncate">${student.playerName}</strong>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-extrabold px-2 py-0.5 rounded-full">${student.gameMode}</span>
+                                    <span class="text-[10px] text-slate-400 font-semibold"><i class="fa-solid fa-clock"></i> ${student.time}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-right">
+                                <div class="text-[9px] text-slate-400 font-bold uppercase">ขยะมลพิษ</div>
+                                <div class="text-xs text-rose-600 font-extrabold flex items-center gap-0.5 justify-end">
+                                    <i class="fa-solid fa-burst text-[10px]"></i> ${student.bombs}
+                                </div>
+                            </div>
+                            <div class="bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-center min-w-[70px]">
+                                <div class="text-[9px] text-indigo-200 font-bold uppercase leading-none">คะแนน</div>
+                                <div class="text-base font-black leading-none mt-1">${student.score}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.inspectStudentAnswers = function(studentId) {
+            window.playSound('flip');
+            const student = importedStudentsData.find(s => s.id === studentId);
+            const feedContainer = document.getElementById('monitor-feed-list');
+            if (!student || !feedContainer) return;
+
+            if (!student.journal || student.journal.length === 0) {
+                feedContainer.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 text-sm">
+                        <i class="fa-solid fa-circle-exclamation text-2xl mb-1 opacity-50"></i>
+                        <p>นักเรียนคนนี้ไม่มีประวัติบันทึกการเรียนรู้</p>
+                    </div>
+                `;
+                return;
+            }
+
+            feedContainer.innerHTML = `
+                <div class="space-y-3">
+                    <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-2xl">
+                        <h5 class="font-black text-indigo-950 text-xs uppercase mb-1">นักเรียนที่กำลังตรวจสอบ:</h5>
+                        <p class="text-base font-bold text-slate-900">${student.playerName}</p>
+                        <div class="flex items-center gap-3 text-xs text-slate-600 mt-2 font-semibold">
+                            <span>โหมด: ${student.gameMode}</span>
+                            <span>•</span>
+                            <span>ระเบิดขยะ: ${student.bombs}</span>
+                            <span>•</span>
+                            <span>เวลา: ${student.time}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3 overflow-y-auto max-h-[38vh]">
+                        ${student.journal.map((log, index) => {
+                            const borderClass = getCategoryBorder(log.category);
+                            const badgeClass = getCategoryBadgeClass(log.category);
+                            return `
+                                <div class="bg-slate-50 border-l-4 ${borderClass} rounded-r-2xl p-3.5 shadow-sm space-y-2 text-xs">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-extrabold text-slate-900">ชุดที่ ${index + 1}</span>
+                                        <span class="px-2 py-0.5 rounded-full border text-[9px] font-black ${badgeClass}">${log.category.toUpperCase()}</span>
+                                    </div>
+                                    <div class="font-black text-slate-800 flex items-center gap-1">
+                                        <span>${log.card1Emoji} ${log.card1Name}</span>
+                                        <span class="text-slate-300">&</span>
+                                        <span>${log.card2Emoji} ${log.card2Name}</span>
+                                    </div>
+                                    <div class="bg-white p-2.5 rounded-xl border border-slate-100 text-slate-600 font-semibold space-y-1">
+                                        <p><strong>🌱 ${log.card1Name}:</strong> ${log.explanation1}</p>
+                                        <p class="pt-1 border-t border-slate-100"><strong>🌱 ${log.card2Name}:</strong> ${log.explanation2}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        };
+
+        // Core visual triggers for Timer
+        function startTimer() {
+            window.secondsPassed = 0;
+            secondsPassed = 0;
+            updateTimerDisplay();
+            clearInterval(timerInterval);
+            window.timerInterval = setInterval(() => {
+                window.secondsPassed++;
+                secondsPassed++;
+                updateTimerDisplay();
+            }, 1000);
+            timerInterval = window.timerInterval;
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(window.secondsPassed / 60);
+            const seconds = window.secondsPassed % 60;
+            const text = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            safeSetText('live-timer', text);
+        }
+
+        // Gameplay setup
+        function initGameBoard() {
+            const board = document.getElementById('game-board');
+            if (!board) return;
+            board.innerHTML = '';
+            
+            // Shuffle and deep clone
+            window.cards = JSON.parse(JSON.stringify(rawCardPool));
+            cards = window.cards;
+            shuffle(window.cards);
+
+            window.cards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'aspect-[3/4.2] perspective-1000 relative cursor-pointer group active:scale-95 transition-transform w-full select-none';
+                cardEl.style.touchAction = 'manipulation';
+                cardEl.id = `card-${index}`;
+                cardEl.setAttribute('onclick', `flipCard(${index})`);
+
+                const theme = getCategoryMeta(card.type);
+
+                cardEl.innerHTML = `
+                    <div class="card-inner absolute inset-0 w-full h-full relative transition duration-500 rounded-2xl shadow-md">
+                        
+                        <!-- CARD BACK -->
+                        <div class="card-front absolute inset-0 bg-gradient-to-br from-slate-900 via-emerald-950 to-indigo-950 rounded-2xl flex flex-col items-center justify-center p-3 text-white overflow-hidden border-2 border-emerald-500/40">
+                            <div class="absolute top-2 left-2 text-[8px] text-emerald-400/50 font-mono">+</div>
+                            <div class="absolute top-2 right-2 text-[8px] text-emerald-400/50 font-mono">+</div>
+                            <div class="absolute bottom-2 left-2 text-[8px] text-emerald-400/50 font-mono">+</div>
+                            <div class="absolute bottom-2 right-2 text-[8px] text-emerald-400/50 font-mono">+</div>
+                            <div class="absolute inset-2 border border-emerald-400/10 rounded-xl pointer-events-none"></div>
+                            
+                            <div class="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-slate-950 flex flex-col items-center justify-center border-2 border-emerald-400/50 shadow-lg shadow-emerald-500/20">
+                                <div class="absolute inset-0.5 rounded-full border border-dashed border-emerald-400/30 animate-spin-slow"></div>
+                                <span class="text-xl sm:text-2xl font-black tracking-wider bg-gradient-to-r from-emerald-400 to-indigo-400 bg-clip-text text-transparent">3R</span>
+                                <span class="text-[7px] font-bold text-emerald-400/70 tracking-widest uppercase -mt-1">Eco Tech</span>
+                            </div>
+                            <div class="mt-3 text-[9px] text-emerald-400/80 uppercase tracking-widest font-black font-mono">3R CARD</div>
+                        </div>
+
+                        <!-- CARD FRONT -->
+                        <div class="card-back absolute inset-0 bg-white rounded-2xl flex flex-row overflow-hidden border-2 ${theme.outerBorder} p-1">
+                            <div class="flex-1 h-full flex flex-col justify-between p-1 relative tech-grid rounded-l-xl">
+                                <div class="absolute top-1 left-1 text-[8px] text-slate-300 font-mono">+</div>
+                                
+                                <div class="w-full text-center py-0.5 border-b border-dashed border-slate-100">
+                                    <span class="text-[10px] sm:text-[11px] font-black tracking-wider uppercase ${theme.textClass}">
+                                        ${theme.headerTitle}
+                                    </span>
+                                </div>
+
+                                <div class="my-auto flex items-center justify-center py-1 relative">
+                                    <div class="absolute top-0 left-2 w-1.5 h-1.5 border-t border-l border-slate-400"></div>
+                                    <div class="absolute top-0 right-2 w-1.5 h-1.5 border-t border-r border-slate-400"></div>
+                                    <div class="absolute bottom-0 left-2 w-1.5 h-1.5 border-b border-l border-slate-400"></div>
+                                    <div class="absolute bottom-0 right-2 w-1.5 h-1.5 border-b border-r border-slate-400"></div>
+                                    
+                                    <div class="text-3xl sm:text-4xl select-none filter drop-shadow-sm transform group-hover:scale-105 transition-transform duration-300">
+                                        ${card.emoji}
+                                    </div>
+                                </div>
+
+                                <div class="w-full">
+                                    <div class="bg-slate-50 border border-slate-150 rounded-lg py-1 px-0.5 text-center shadow-inner">
+                                        <div class="text-[9px] sm:text-[10px] font-extrabold text-slate-900 truncate leading-tight">
+                                            ${card.name}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Solid Ribbon -->
+                            <div class="${theme.ribbonBg} w-[18px] sm:w-[22px] h-full flex flex-col items-center justify-between py-2 rounded-r-xl relative text-white border-l ${theme.ribbonBorder}">
+                                <div class="text-[6px] opacity-60 font-mono font-bold">+</div>
+                                <div class="w-3.5 h-3.5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+                                    <i class="${theme.ribbonIcon} text-[7px]"></i>
+                                </div>
+                                <div class="vertical-text text-[8px] sm:text-[9px] font-bold tracking-widest uppercase opacity-90 my-auto transform rotate-180">
+                                    ${card.type}
+                                </div>
+                                <div class="text-[6px] opacity-60 font-mono font-bold">+</div>
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+
+                board.appendChild(cardEl);
+            });
+        }
+
+        window.flipCard = function(index) {
+            const now = Date.now();
+            // Throttling: Deny double clicks within 250 milliseconds
+            if (now - window.lastClickTime < 250) return;
+
+            if (window.isBoardLocked) return;
+            const cardEl = document.getElementById(`card-${index}`);
+            if (!cardEl) return;
+            if (cardEl.classList.contains('card-flipped') || cardEl.classList.contains('card-matched')) return;
+
+            window.lastClickTime = now;
+            lastClickTime = now;
+            cardEl.classList.add('card-flipped');
+
+            // Handle bomb card flip immediately
+            if (window.cards[index].type === 'bomb') {
+                triggerBombExplosion(index);
+                return;
+            }
+
+            window.playSound('flip');
+            window.flippedCards.push(index);
+            flippedCards = window.flippedCards;
+
+            if (window.flippedCards.length === 2) {
+                window.isBoardLocked = true;
+                isBoardLocked = true;
+                window.lockTimestamp = Date.now(); // Safety Watchdog reference
+                checkMatch();
+            }
+        };
+
+        function triggerBombExplosion(bombIndex) {
+            window.isBoardLocked = true;
+            isBoardLocked = true;
+            window.lockTimestamp = Date.now(); // Safety Watchdog reference
+            
+            // Subtract score and record bomb hits based on active player
+            if (window.gameMode === 'solo') {
+                window.p1Bombs++;
+                p1Bombs = window.p1Bombs;
+                window.p1Score = Math.max(0, window.p1Score - 1);
+                p1Score = window.p1Score;
+                safeSetText('solo-score', `${window.p1Score} / 14`);
+                safeSetText('p1-bomb-hits', `P1: ${window.p1Bombs} ครั้ง`);
+            } else {
+                if (window.activePlayer === 1) {
+                    window.p1Bombs++;
+                    p1Bombs = window.p1Bombs;
+                    window.p1Score = Math.max(0, window.p1Score - 1);
+                    p1Score = window.p1Score;
+                } else {
+                    window.p2Bombs++;
+                    p2Bombs = window.p2Bombs;
+                    window.p2Score = Math.max(0, window.p2Score - 1);
+                    p2Score = window.p2Score;
+                }
+                updateVersusScores();
+            }
+
+            window.playSound('explosion');
+            
+            const overlay = document.getElementById('flash-overlay');
+            if (overlay) overlay.classList.add('flash-red');
+            
+            const boardWrapper = document.getElementById('game-board-wrapper');
+            if (boardWrapper) boardWrapper.classList.add('shake-animation');
+
+            // Show customized toast warning
+            const currentTurnPlayerName = window.activePlayer === 1 ? window.p1Name : window.p2Name;
+            showToast(`ตู้มมม! ${currentTurnPlayerName} เปิดเจอระเบิดขยะมลพิษ หัก 1 คะแนน! 💥`, '💥');
+
+            setTimeout(() => {
+                const bombCard = document.getElementById(`card-${bombIndex}`);
+                if (bombCard) bombCard.classList.remove('card-flipped');
+                
+                if (window.flippedCards.length === 1) {
+                    const firstCardIndex = window.flippedCards[0];
+                    const firstCard = document.getElementById('card-' + firstCardIndex);
+                    if (firstCard) firstCard.classList.remove('card-flipped');
+                }
+                
+                window.flippedCards = [];
+                flippedCards = [];
+                if (overlay) overlay.classList.remove('flash-red');
+                if (boardWrapper) boardWrapper.classList.remove('shake-animation');
+                
+                if (window.gameMode === 'versus') {
+                    swapActivePlayerTurn();
+                } else {
+                    window.isBoardLocked = false;
+                    isBoardLocked = false;
+                    window.lockTimestamp = null;
+                }
+            }, 1600);
+        }
+
+        function checkMatch() {
+            const index1 = window.flippedCards[0];
+            const index2 = window.flippedCards[1];
+            
+            const card1 = window.cards[index1];
+            const card2 = window.cards[index2];
+
+            if (card1.type === card2.type) {
+                setTimeout(() => {
+                    window.playSound('match');
+                    
+                    const el1 = document.getElementById(`card-${index1}`);
+                    const el2 = document.getElementById(`card-${index2}`);
+                    if (el1) el1.classList.add('card-matched');
+                    if (el2) el2.classList.add('card-matched');
+
+                    openReflectionModal(card1, card2, index1, index2);
+                }, 600);
+            } else {
+                setTimeout(() => {
+                    window.playSound('fail');
+                    
+                    const el1 = document.getElementById(`card-${index1}`);
+                    const el2 = document.getElementById(`card-${index2}`);
+                    if (el1) el1.classList.remove('card-flipped');
+                    if (el2) el2.classList.remove('card-flipped');
+
+                    window.flippedCards = [];
+                    flippedCards = [];
+                    
+                    if (window.gameMode === 'versus') {
+                        swapActivePlayerTurn();
+                    } else {
+                        window.isBoardLocked = false;
+                        isBoardLocked = false;
+                        window.lockTimestamp = null;
+                    }
+                }, 1300);
+            }
+        }
+
+        function swapActivePlayerTurn() {
+            window.activePlayer = window.activePlayer === 1 ? 2 : 1;
+            activePlayer = window.activePlayer;
+            window.playSound('turnSwap');
+            highlightActivePlayerBadge();
+
+            const nameToSwap = window.activePlayer === 1 ? window.p1Name : window.p2Name;
+            const emojiToSwap = window.activePlayer === 1 ? '🟢' : '🔵';
+            showToast(`ถึงคิวแข่งของ: ${nameToSwap} แล้ว!`, emojiToSwap);
+
+            setTimeout(() => {
+                window.isBoardLocked = false;
+                isBoardLocked = false;
+            }, 300);
+        }
+
+        // Highlight Active Player Badge function
+        function highlightActivePlayerBadge() {
+            const p1Badge = document.getElementById('p1-badge');
+            const p2Badge = document.getElementById('p2-badge');
+            const turnBannerName = document.getElementById('active-player-name');
+
+            if (window.activePlayer === 1) {
+                if (p1Badge) p1Badge.className = "bg-emerald-50 border-4 border-emerald-500 rounded-xl px-4 py-2 transition-all duration-300 scale-105 active-p1-glow";
+                if (p2Badge) p2Badge.className = "bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 transition-all duration-300 scale-100 opacity-60";
+                if (turnBannerName) {
+                    turnBannerName.innerText = `${window.p1Name} (สีเขียว)`;
+                    turnBannerName.className = "text-xl font-black text-emerald-600 animate-pulse";
+                }
+            } else {
+                if (p2Badge) p2Badge.className = "bg-indigo-50 border-4 border-indigo-500 rounded-xl px-4 py-2 transition-all duration-300 scale-105 active-p2-glow";
+                if (p1Badge) p1Badge.className = "bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 transition-all duration-300 scale-100 opacity-60";
+                if (turnBannerName) {
+                    turnBannerName.innerText = `${window.p2Name} (สีน้ำเงิน)`;
+                    turnBannerName.className = "text-xl font-black text-indigo-600 animate-pulse";
+                }
+            }
+        }
+
+        function updateVersusScores() {
+            safeSetText('p1-score-val', `${window.p1Score} คะแนน`);
+            safeSetText('p2-score-val', `${window.p2Score} คะแนน`);
+            safeSetText('p1-bomb-hits', `P1 (${window.p1Name}): ${window.p1Bombs} ครั้ง`);
+            safeSetText('p2-bomb-hits', `P2 (${window.p2Name}): ${window.p2Bombs} ครั้ง`);
+        }
+
+        function openReflectionModal(card1, card2, index1, index2) {
+            window.pendingMatchData = {
+                card1: card1,
+                card2: card2,
+                index1: index1,
+                index2: index2
+            };
+            pendingMatchData = window.pendingMatchData;
+
+            const cat = card1.type.toUpperCase();
+            const badgeLabel = document.getElementById('modal-category-badge');
+            const categoryText = document.getElementById('modal-category-text');
+            if (badgeLabel) {
+                badgeLabel.innerText = cat;
+                badgeLabel.className = `text-xs font-bold px-3 py-1 rounded-full border ${getCategoryBadgeClass(card1.type)}`;
+            }
+            if (categoryText) categoryText.innerText = getCatNameThai(card1.type);
+
+            const modalHeader = document.getElementById('modal-header-container');
+            const activePlayerLabel = document.getElementById('modal-active-player');
+            const activePlayerNameText = window.activePlayer === 1 ? window.p1Name : window.p2Name;
+
+            if (window.gameMode === 'solo') {
+                if (activePlayerLabel) {
+                    activePlayerLabel.innerText = activePlayerNameText;
+                    activePlayerLabel.className = "font-black text-emerald-600 text-base";
+                }
+                if (modalHeader) modalHeader.className = "bg-emerald-900 text-white px-6 py-4 flex items-center justify-between border-b border-emerald-800";
+            } else {
+                if (activePlayerLabel) {
+                    activePlayerLabel.innerText = `${activePlayerNameText} (ผู้เล่น ${window.activePlayer})`;
+                    if (window.activePlayer === 1) {
+                        activePlayerLabel.className = "font-black text-emerald-600 text-base";
+                    } else {
+                        activePlayerLabel.className = "font-black text-indigo-600 text-base";
+                    }
+                }
+                if (modalHeader) {
+                    if (window.activePlayer === 1) {
+                        modalHeader.className = "bg-emerald-800 text-white px-6 py-4 flex items-center justify-between border-b border-emerald-700";
+                    } else {
+                        modalHeader.className = "bg-indigo-900 text-white px-6 py-4 flex items-center justify-between border-b border-indigo-800";
+                    }
+                }
+            }
+
+            safeSetText('modal-card1-top-type', card1.type.toUpperCase());
+            const type1 = document.getElementById('modal-card1-top-type');
+            if (type1) type1.className = `text-xs font-black tracking-wider uppercase ${getCatTextClass(card1.type)}`;
+            
+            safeSetText('modal-card1-emoji', card1.emoji);
+            safeSetText('modal-card1-name', card1.name);
+            safeSetText('modal-card1-label-emoji', card1.emoji);
+            safeSetText('modal-card1-label-name', card1.name);
+
+            safeSetText('modal-card2-top-type', card2.type.toUpperCase());
+            const type2 = document.getElementById('modal-card2-top-type');
+            if (type2) type2.className = `text-xs font-black tracking-wider uppercase ${getCatTextClass(card2.type)}`;
+            
+            safeSetText('modal-card2-emoji', card2.emoji);
+            safeSetText('modal-card2-name', card2.name);
+            safeSetText('modal-card2-label-emoji', card2.emoji);
+            safeSetText('modal-card2-label-name', card2.name);
+
+            const input1 = document.getElementById('explanation-input-1');
+            const input2 = document.getElementById('explanation-input-2');
+            if (input1) {
+                input1.placeholder = getPlaceholderText(card1.type, card1.name);
+                input1.value = '';
+            }
+            if (input2) {
+                input2.placeholder = getPlaceholderText(card2.type, card2.name);
+                input2.value = '';
+            }
+            
+            safeAddClass('modal-warning', 'hidden');
+            safeRemoveClass('reflection-modal', 'hidden');
+        }
+
+        function getCatTextClass(type) {
+            switch(type) {
+                case 'reduce': return 'text-blue-700';
+                case 'reuse': return 'text-amber-600';
+                case 'recycle': return 'text-emerald-700';
+                default: return 'text-slate-700';
+            }
+        }
+
+        // Standardized badge class function to prevent function mismatch crash
+        function getCategoryBadgeClass(type) {
+            switch(type) {
+                case 'reduce': return 'bg-blue-100 text-blue-800 border-blue-300';
+                case 'reuse': return 'bg-amber-100 text-amber-800 border-amber-300';
+                case 'recycle': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                default: return 'bg-slate-100 text-slate-800 border-slate-300';
+            }
+        }
+
+        function getCatBadgeClass(type) {
+            return getCategoryBadgeClass(type);
+        }
+
+        function getCatNameThai(type) {
+            switch(type) {
+                case 'reduce': return 'Reduce (ลดการใช้)';
+                case 'reuse': return 'Reuse (ใช้ซ้ำ)';
+                case 'recycle': return 'Recycle (แปรรูปนำกลับมาใช้)';
+                default: return 'สิ่งแวดล้อม';
+            }
+        }
+
+        function getPlaceholderText(type, name) {
+            switch(type) {
+                case 'reduce': return `อธิบายว่า [${name}] สามารถลดทอนปริมาณทรัพยากร/พลังงานได้อย่างไรบ้าง...`;
+                case 'reuse': return `อธิบายว่า [${name}] สามารถนำไปต่อยอดใช้ประโยชน์ซ้ำๆ ในชีวิตจริงได้อย่างไรบ้าง...`;
+                case 'recycle': return `อธิบายว่า [${name}] จะคัดแยกประเภทและนำส่งหลอมแปรรูปกลับมาเป็นสิ่งใดได้บ้าง...`;
+                default: return 'ระบุแนวคิดการปกป้องสิ่งแวดล้อม...';
+            }
+        }
+
+        window.submitExplanation = async () => {
+            const exp1 = document.getElementById('explanation-input-1').value.trim();
+            const exp2 = document.getElementById('explanation-input-2').value.trim();
+
+            if (!exp1 || !exp2) {
+                safeRemoveClass('modal-warning', 'hidden');
+                return;
+            }
+
+            const activePlayerTextName = window.activePlayer === 1 ? window.p1Name : window.p2Name;
+
+            const matchRecord = {
+                category: window.pendingMatchData.card1.type,
+                card1Name: window.pendingMatchData.card1.name,
+                card1Emoji: window.pendingMatchData.card1.emoji,
+                card2Name: window.pendingMatchData.card2.name,
+                card2Emoji: window.pendingMatchData.card2.emoji,
+                explanation1: exp1,
+                explanation2: exp2,
+                solvedBy: activePlayerTextName,
+                timestamp: new Date().toLocaleTimeString('th-TH')
+            };
+
+            window.matchJournal.push(matchRecord);
+            matchJournal = window.matchJournal;
+            updateJournalUI();
+
+            // Record scores locally
+            if (window.gameMode === 'solo') {
+                window.p1Score++;
+                p1Score = window.p1Score;
+                safeSetText('solo-score', `${window.p1Score} / 14`);
+            } else {
+                if (window.activePlayer === 1) {
+                    window.p1Score++;
+                    p1Score = window.p1Score;
+                } else {
+                    window.p2Score++;
+                    p2Score = window.p2Score;
+                }
+                updateVersusScores();
+            }
+
+            // Instant Unlock UI state
+            window.flippedCards = [];
+            flippedCards = [];
+            window.isBoardLocked = false;
+            isBoardLocked = false;
+            window.lockTimestamp = null;
+            window.pendingMatchData = null;
+            pendingMatchData = null;
+
+            safeAddClass('reflection-modal', 'hidden');
+
+            const totalMatchesMade = window.matchJournal.length;
+            if (totalMatchesMade === 14) {
+                endGame();
+            }
+        };
+
+        function updateJournalUI() {
+            const list = document.getElementById('journal-list');
+            if (!list) return;
+            if (window.matchJournal.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 text-sm space-y-2">
+                        <i class="fa-solid fa-folder-open text-3xl opacity-50"></i>
+                        <p>ระบบยังไม่ได้รับข้อมูลบันทึกใดๆ<br>พยายามค้นหาคู่การ์ดที่เข้าข่าย 3R เดียวกันเลย!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = window.matchJournal.map((record, index) => {
+                const borderClass = getCategoryBorder(record.category);
+                const titleColor = getCategoryTitleColor(record.category);
+                return `
+                    <div class="bg-white border-l-4 ${borderClass} rounded-r-2xl p-4 shadow-sm space-y-2 text-xs relative">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold ${titleColor} uppercase tracking-wider text-[10px]">${getCatNameThai(record.category)}</span>
+                            <span class="text-[9px] text-slate-400">บันทึกโดย: ${record.solvedBy}</span>
+                        </div>
+                        <div class="font-black text-slate-800 flex flex-wrap items-center gap-1">
+                            <span>ชุดที่ ${index + 1}:</span>
+                            <span>${record.card1Emoji} ${record.card1Name}</span>
+                            <span class="text-slate-300">และ</span>
+                            <span>${record.card2Emoji} ${record.card2Name}</span>
+                        </div>
+                        <div class="bg-slate-50 p-2.5 rounded-xl space-y-1.5 text-slate-600 font-semibold">
+                            <div><strong>🌱 ${record.card1Name}:</strong> ${record.explanation1}</div>
+                            <div class="pt-1.5 border-t border-slate-200"><strong>🌱 ${record.card2Name}:</strong> ${record.explanation2}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getCategoryBorder(cat) {
+            switch(cat) {
+                case 'reduce': return 'border-blue-500';
+                case 'reuse': return 'border-amber-500';
+                case 'recycle': return 'border-emerald-500';
+                default: return 'border-slate-500';
+            }
+        }
+
+        function getCategoryTitleColor(cat) {
+            switch(cat) {
+                case 'reduce': return 'text-blue-600';
+                case 'reuse': return 'text-amber-600';
+                case 'recycle': return 'text-emerald-600';
+                default: return 'text-slate-600';
+            }
+        }
+
+        window.toggleJournal = function() {
+            const drawer = document.getElementById('journal-drawer');
+            if (drawer) drawer.classList.toggle('translate-x-full');
+        };
+
+        async function endGame() {
+            clearInterval(timerInterval);
+            window.playSound('victory');
+            
+            confetti({
+                particleCount: 200,
+                spread: 90,
+                origin: { y: 0.6 }
+            });
+
+            safeSetText('end-title', window.gameMode === 'solo' ? `เกียรติบัตรนักบุกเบิก 3R! 🥇` : `ประมวลผลแมตช์ 3R สำเร็จ!`);
+
+            const statsContainer = document.getElementById('end-stats-container');
+
+            if (window.gameMode === 'solo') {
+                const finalTime = document.getElementById('live-timer').innerText;
+                
+                if (statsContainer) {
+                    statsContainer.innerHTML = `
+                        <div class="grid grid-cols-2 gap-3 text-center">
+                            <div class="bg-white border border-slate-200 p-3 rounded-2xl">
+                                <span class="text-[10px] text-slate-500 font-bold block mb-0.5">เวลาที่ใช้</span>
+                                <strong class="text-lg text-slate-800 font-black">${finalTime}</strong>
+                            </div>
+                            <div class="bg-white border border-slate-200 p-3 rounded-2xl">
+                                <span class="text-[10px] text-slate-500 font-bold block mb-0.5">เหยียบระเบิด</span>
+                                <strong class="text-lg text-rose-600 font-black">${window.p1Bombs} ครั้ง</strong>
+                            </div>
+                        </div>
+                        <div class="text-center font-bold text-slate-700 bg-white border border-slate-200 py-3.5 rounded-2xl mt-3">
+                            ผู้กู้โลก: <span id="end-player" class="text-emerald-600">${window.p1Name}</span>
+                        </div>
+                    `;
+                }
+            } else {
+                let versusVerdict = "";
+                let subClass = "";
+                if (window.p1Score > window.p2Score) {
+                    versusVerdict = `🏆 ${window.p1Name} ชนะการแข่งขัน! 🎉`;
+                    subClass = "text-emerald-600";
+                } else if (window.p2Score > window.p1Score) {
+                    versusVerdict = `🏆 ${window.p2Name} ชนะการแข่งขัน! 🎉`;
+                    subClass = "text-indigo-600";
+                } else {
+                    versusVerdict = `🤝 เสมอกัน! ประลองฝีมือรักษ์โลกได้อย่างดีเยี่ยม 🤝`;
+                    subClass = "text-amber-600";
+                }
+
+                if (statsContainer) {
+                    statsContainer.innerHTML = `
+                        <div class="text-center font-black text-xl mb-4 ${subClass}">
+                            ${versusVerdict}
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white border-2 border-emerald-300 p-3 rounded-2xl space-y-1">
+                                <span class="text-[10px] font-black text-emerald-600 block">🟢 PLAYER 1</span>
+                                <strong class="text-base text-slate-800 font-black block truncate">${window.p1Name}</strong>
+                                <div class="text-xs text-slate-600">คะแนน: <strong class="text-emerald-600 text-sm font-black">${window.p1Score} แต้ม</strong></div>
+                                <div class="text-[10px] text-slate-500">พลาดโดนระเบิด: ${window.p1Bombs} ครั้ง</div>
+                            </div>
+                            <div class="bg-white border-2 border-indigo-300 p-3 rounded-2xl space-y-1">
+                                <span class="text-[10px] font-black text-indigo-600 block">🔵 PLAYER 2</span>
+                                <strong class="text-base text-slate-800 font-black block truncate">${window.p2Name}</strong>
+                                <div class="text-xs text-slate-600">คะแนน: <strong class="text-indigo-600 text-sm font-black">${window.p2Score} แต้ม</strong></div>
+                                <div class="text-[10px] text-slate-500">พลาดโดนระเบิด: ${window.p2Bombs} ครั้ง</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            const reportContainer = document.getElementById('end-report-container');
+            if (reportContainer) {
+                if (window.matchJournal.length === 0) {
+                    reportContainer.innerHTML = '<p class="text-slate-500 text-center">ไม่มีข้อมูลประวัติคำตอบ</p>';
+                } else {
+                    reportContainer.innerHTML = window.matchJournal.map((record, index) => {
+                        return `
+                            <div class="border-b border-slate-200 pb-3 mb-3 last:border-0 last:pb-0">
+                                <div class="font-bold text-slate-800 flex items-center justify-between mb-1">
+                                    <span>ชุดที่ ${index+1}: [${getCatNameThai(record.category).toUpperCase()}]</span>
+                                    <span class="text-[10px] text-emerald-600">บันทึกโดย: ${record.solvedBy}</span>
+                                </div>
+                                <p class="text-emerald-800 font-black mb-1">${record.card1Emoji} ${record.card1Name} & ${record.card2Emoji} ${record.card2Name}</p>
+                                <ul class="list-disc pl-4 text-slate-600 space-y-1 font-semibold">
+                                    <li><strong>${record.card1Name}:</strong> ${record.explanation1}</li>
+                                    <li><strong>${record.card2Name}:</strong> ${record.explanation2}</li>
+                                </ul>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            safeRemoveClass('end-screen', 'hidden');
+        }
+
+        // Export student answers into a JSON file for the teacher to load later
+        window.downloadStudentJSON = function() {
+            const finalTime = document.getElementById('live-timer').innerText;
+            const payload = {
+                playerName: window.gameMode === 'versus' ? `${window.p1Name} & ${window.p2Name}` : window.p1Name,
+                gameMode: window.gameMode === 'versus' ? 'แข่งกัน 2 คน (Versus)' : 'เล่นคนเดียว (Solo)',
+                score: window.gameMode === 'versus' ? `P1: ${window.p1Score} | P2: ${window.p2Score}` : `${window.p1Score} / 14`,
+                bombs: window.gameMode === 'versus' ? `P1: ${window.p1Bombs} | P2: ${window.p2Bombs}` : `${window.p1Bombs} ครั้ง`,
+                time: finalTime,
+                journal: window.matchJournal
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            
+            // Clean file name
+            const safeName = (window.p1Name + "_" + (window.gameMode === 'versus' ? window.p2Name : '')).replace(/[^a-zA-Z0-9ก-๙]/g, "_");
+            downloadAnchor.setAttribute("download", `3R_Report_${safeName}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            showToast("ดาวน์โหลดไฟล์ผลการเรียนรู้สำเร็จ! 💾 คุณครูสามารถนำไฟล์นี้ไปตรวจคะแนนย้อนหลังได้เลย");
+        };
+
+        window.copyJournalToClipboard = function() {
+            let journalText = `=======================================\n`;
+            journalText += `📝 รายงานสรุปบันทึกการเรียนรู้: เกมจับคู่ 3R จับคู่กู้สิ่งแวดล้อม\n`;
+            journalText += `โหมดการเล่น: ${window.gameMode.toUpperCase()}\n`;
+            
+            if (window.gameMode === 'solo') {
+                journalText += `ผู้บันทึกหลัก: ${window.p1Name}\n`;
+                const finalTime = document.getElementById('live-timer').innerText;
+                journalText += `เวลาที่ประมวลผลสำเร็จ: ${finalTime}\n`;
+                journalText += `โดนระเบิดมลพิษ: ${window.p1Bombs} ครั้ง\n`;
+            } else {
+                journalText += `ผู้ประลองการเรียนรู้: ${window.p1Name} (คะแนน: ${window.p1Score}, ระเบิด: ${window.p1Bombs}) VS ${window.p2Name} (คะแนน: ${window.p2Score}, ระเบิด: ${window.p2Bombs})\n`;
+                let winMsg = window.p1Score > window.p2Score ? `${window.p1Name} ชนะ!` : (window.p2Score > window.p1Score ? `${window.p2Name} ชนะ!` : `เสมอกัน!`);
+                journalText += `ผลคำวินิจฉัย: ${winMsg}\n`;
+            }
+            
+            journalText += `ภารกิจจับคู่รวมสำเร็จ: 14 / 14 คู่สมบูรณ์\n`;
+            journalText += `=======================================\n\n`;
+
+            window.matchJournal.forEach((record, index) => {
+                journalText += `ชุดที่ ${index + 1} | ประเภท 3R: [${getCatNameThai(record.category)}] (ตอบโดย: ${record.solvedBy})\n`;
+                journalText += `👉 สิ่งของ 1: ${record.card1Emoji} ${record.card1Name}\n`;
+                journalText += `   ↳ วิเคราะห์รักษ์โลก: ${record.explanation1}\n`;
+                journalText += `👉 สิ่งของ 2: ${record.card2Emoji} ${record.card2Name}\n`;
+                journalText += `   ↳ วิเคราะห์รักษ์โลก: ${record.explanation2}\n`;
+                journalText += `---------------------------------------\n`;
+            });
+
+            journalText += `\nขอบคุณที่ร่วมรักษ์โลกและร่วมเล่นเกมฝึกวิเคราะห์ไอเดียกู้ภัยสิ่งแวดล้อมครับ 💚🌍`;
+
+            const tempTextarea = document.createElement("textarea");
+            tempTextarea.value = journalText;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            tempTextarea.setSelectionRange(0, 99999);
+
+            try {
+                document.execCommand("copy");
+                showToast("คัดลอกประวัติสรุปข้อมูลเรียบร้อยแล้ว! 📋💚", '📋');
+            } catch (err) {
+                showToast("ไม่สามารถคัดลอกข้อความอัตโนมัติได้", '❌');
+            }
+
+            document.body.removeChild(tempTextarea);
+        };
+
+        window.showToast = function(message, emoji = '✅') {
+            const toast = document.getElementById('toast');
+            const turnToast = document.getElementById('turn-toast');
+
+            if (message.includes("สลับตา") || message.includes("ถึงคิวแข่ง")) {
+                if (turnToast) {
+                    safeSetText('turn-toast-emoji', emoji);
+                    safeSetText('turn-toast-message', message);
+                    turnToast.classList.remove('opacity-0', 'pointer-events-none');
+                    setTimeout(() => {
+                        turnToast.classList.add('opacity-0', 'pointer-events-none');
+                    }, 2000);
+                }
+            } else {
+                if (toast) {
+                    safeSetText('toast-message', message);
+                    toast.classList.remove('opacity-0', 'pointer-events-none');
+                    setTimeout(() => {
+                        toast.classList.add('opacity-0', 'pointer-events-none');
+                    }, 3000);
+                }
+            }
+        };
+
+        window.restartToHome = function() {
+            window.p1Score = 0;
+            window.p2Score = 0;
+            window.p1Bombs = 0;
+            window.p2Bombs = 0;
+            window.flippedCards = [];
+            window.isBoardLocked = false;
+            window.lockTimestamp = null;
+            window.matchJournal = [];
+            window.pendingMatchData = null;
+            p1Score = 0;
+            p2Score = 0;
+            p1Bombs = 0;
+            p2Bombs = 0;
+            flippedCards = [];
+            isBoardLocked = false;
+            matchJournal = [];
+            pendingMatchData = null;
+
+            safeAddClass('end-screen', 'hidden');
+            safeAddClass('reflection-modal', 'hidden');
+            safeAddClass('game-workspace', 'hidden');
+            safeAddClass('teacher-monitor-screen', 'hidden');
+            safeAddClass('dashboard-container', 'hidden');
+
+            safeRemoveClass('start-screen', 'hidden');
+            updateJournalUI();
+        };
+
+        // SAFETY WATCHDOG LOOP (Prevents freeze if click calculations desync)
+        setInterval(() => {
+            const modalEl = document.getElementById('reflection-modal');
+            const startEl = document.getElementById('start-screen');
+            const endEl = document.getElementById('end-screen');
+
+            const modalVisible = modalEl ? !modalEl.classList.contains('hidden') : false;
+            const startVisible = startEl ? !startEl.classList.contains('hidden') : false;
+            const endVisible = endEl ? !endEl.classList.contains('hidden') : false;
+
+            // If board lock persists longer than 3.5 seconds with no modal, hard unlock
+            if (window.isBoardLocked && !modalVisible && !startVisible && !endVisible) {
+                console.warn("Safety Watchdog Guard triggered: Unlocked stuck board.");
+                window.isBoardLocked = false;
+                isBoardLocked = false;
+                window.flippedCards = [];
+                flippedCards = [];
+                window.lockTimestamp = null;
+            } else {
+                window.lockTimestamp = null;
+            }
+        }, 1000);
+
+        // Helper to shuffle list
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Initialize board default
+        document.addEventListener("DOMContentLoaded", () => {
+            setOfflineMode('solo');
+        });
+    </script>
+</body>
+</html>
